@@ -530,12 +530,13 @@ st.html(f"""
 # ─────────────────────────────────────────────
 #  TABS
 # ─────────────────────────────────────────────
-tab1, tab2, tab3, tab4, tab5 = st.tabs([
+tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
     "🔥 Monthly Heatmap",
     "📈 Trend Charts",
     "📊 Annual Returns",
     "📉 Risk Statistics",
-    "🔗 Correlation"
+    "🔗 Correlation",
+    "🏆 Rankings"
 ])
 
 # ────────────────── TAB 1 : HEATMAP ──────────────────
@@ -890,6 +891,265 @@ with tab5:
         st.dataframe(pairs_df, use_container_width=True, hide_index=True)
     else:
         st.info("No pairs with |ρ| > 0.75 in the selected universe.")
+
+
+
+# ────────────────── TAB 6 : RANKINGS ──────────────────
+with tab6:
+    st.html('<div class="section-header">🏆 Index Rankings — Return & Risk Scorecard</div>')
+
+    clean = returns_df.dropna()
+
+    # ── Build rankings dataframe ──
+    rank_df = pd.DataFrame(index=returns_df.columns)
+    rank_df["Avg Monthly Ret (%)"]  = clean.mean().round(3)
+    rank_df["Ann. Return (%)"]      = (((1 + clean.mean()/100)**12)-1)*100
+    rank_df["Ann. Volatility (%)"]  = (clean.std() * np.sqrt(12)).round(3)
+    rank_df["Sharpe Ratio"]         = ((rank_df["Ann. Return (%)"] - 4.5)
+                                        / rank_df["Ann. Volatility (%)"]).round(3)
+    var95 = clean.quantile(0.05)
+    rank_df["VaR 95% (%)"]          = var95.round(3)
+    rank_df["CVaR 95% (%)"]         = pd.Series(
+        {c: clean[c][clean[c] <= var95[c]].mean() for c in clean.columns}
+    ).round(3)
+    rank_df["Hit Rate (%)"]         = ((clean > 0).sum() / len(clean) * 100).round(1)
+    rank_df["Max Monthly Loss (%)"] = clean.min().round(3)
+
+    # ── Ordinal ranks (1 = best) ──
+    rank_df["Rank: Return"]    = rank_df["Ann. Return (%)"].rank(ascending=False).astype(int)
+    rank_df["Rank: Volatility"]= rank_df["Ann. Volatility (%)"].rank(ascending=True).astype(int)   # lower = better
+    rank_df["Rank: Sharpe"]    = rank_df["Sharpe Ratio"].rank(ascending=False).astype(int)
+    rank_df["Rank: VaR"]       = rank_df["VaR 95% (%)"].rank(ascending=False).astype(int)          # less negative = better
+    rank_df["Rank: Hit Rate"]  = rank_df["Hit Rate (%)"].rank(ascending=False).astype(int)
+
+    # ── Composite score: average of all ranks (lower = better overall) ──
+    rank_cols = ["Rank: Return","Rank: Volatility","Rank: Sharpe","Rank: VaR","Rank: Hit Rate"]
+    rank_df["Composite Score"] = rank_df[rank_cols].mean(axis=1).round(2)
+    rank_df["Overall Rank"]    = rank_df["Composite Score"].rank(ascending=True).astype(int)
+    rank_df = rank_df.sort_values("Overall Rank")
+
+    # ── Medal emojis ──
+    def medal(r):
+        return {1:"🥇", 2:"🥈", 3:"🥉"}.get(r, f"#{r}")
+
+    # ── Summary cards: Top 3 overall ──
+    st.html('<div class="section-header">🎖 Overall Top Performers</div>')
+    top3 = rank_df.head(3)
+    card_cols = st.columns(3)
+    for i, (idx_name, row) in enumerate(top3.iterrows()):
+        sign = "positive" if row["Ann. Return (%)"] >= 0 else "negative"
+        ret_str = f'{"+" if row["Ann. Return (%)"]>=0 else ""}{row["Ann. Return (%)"]:.1f}%'
+        with card_cols[i]:
+            st.html(f"""
+            <div class="metric-card" style="border-color:{GOLD};">
+              <div class="metric-label">{medal(i+1)} Overall Rank #{i+1}</div>
+              <div class="metric-value neutral" style="font-size:1.1rem; white-space:normal;">{idx_name}</div>
+              <div class="metric-sub" style="margin-top:8px;">
+                Ann Return: <span style="color:{'#28a745' if row['Ann. Return (%)']>=0 else '#dc3545'}; -webkit-text-fill-color:{'#28a745' if row['Ann. Return (%)']>=0 else '#dc3545'}; font-weight:700;">{ret_str}</span><br>
+                Sharpe: <span style="color:{GOLD}; -webkit-text-fill-color:{GOLD}; font-weight:700;">{row['Sharpe Ratio']:.2f}</span><br>
+                Volatility: {row['Ann. Volatility (%)']:.1f}% &nbsp;|&nbsp; Hit Rate: {row['Hit Rate (%)']:.0f}%
+              </div>
+            </div>""")
+
+    # ── Full rankings table ──
+    st.html('<div class="section-header">📋 Full Rankings Table</div>')
+
+    display_cols = [
+        "Overall Rank", "Ann. Return (%)", "Ann. Volatility (%)", "Sharpe Ratio",
+        "VaR 95% (%)", "CVaR 95% (%)", "Hit Rate (%)", "Max Monthly Loss (%)",
+        "Rank: Return", "Rank: Volatility", "Rank: Sharpe", "Rank: VaR", "Rank: Hit Rate",
+        "Composite Score"
+    ]
+    disp_df = rank_df[display_cols].copy()
+
+    def style_rank_row(val, col):
+        if col == "Overall Rank":
+            if val == 1:   return f"background-color:#b8860b; color:#000; font-weight:900;"
+            if val == 2:   return f"background-color:#808080; color:#000; font-weight:700;"
+            if val == 3:   return f"background-color:#8b4513; color:#fff; font-weight:700;"
+            return ""
+        if col in ["Ann. Return (%)", "Sharpe Ratio", "Hit Rate (%)"]:
+            if pd.isna(val): return ""
+            return f"color:{GREEN}; font-weight:700;" if val > 0 else f"color:{RED};"
+        if col in ["Ann. Volatility (%)", "VaR 95% (%)", "CVaR 95% (%)", "Max Monthly Loss (%)"]:
+            if pd.isna(val): return ""
+            return f"color:{RED};" if val < 0 else f"color:{GREEN};"
+        if col in ["Rank: Return","Rank: Volatility","Rank: Sharpe","Rank: VaR","Rank: Hit Rate","Composite Score"]:
+            if pd.isna(val): return ""
+            n = len(rank_df)
+            if val <= max(1, n*0.2):  return f"color:{GREEN}; font-weight:700;"
+            if val >= n*0.8:           return f"color:{RED};"
+            return f"color:{GOLD};"
+        return ""
+
+    styled_rank = (
+        disp_df.style
+        .apply(lambda col: [style_rank_row(v, col.name) for v in col], axis=0)
+        .format({
+            "Ann. Return (%)":      "{:+.2f}%",
+            "Ann. Volatility (%)":  "{:.2f}%",
+            "Sharpe Ratio":         "{:.3f}",
+            "VaR 95% (%)":          "{:.2f}%",
+            "CVaR 95% (%)":         "{:.2f}%",
+            "Hit Rate (%)":         "{:.1f}%",
+            "Max Monthly Loss (%)": "{:.2f}%",
+            "Composite Score":      "{:.2f}",
+            "Overall Rank":         "#{:.0f}",
+            "Rank: Return":         "#{:.0f}",
+            "Rank: Volatility":     "#{:.0f}",
+            "Rank: Sharpe":         "#{:.0f}",
+            "Rank: VaR":            "#{:.0f}",
+            "Rank: Hit Rate":       "#{:.0f}",
+        })
+        .set_properties(**{
+            "font-family": "JetBrains Mono, monospace",
+            "font-size": "11px", "text-align": "center",
+            "border": f"1px solid {CARD_BG}",
+        })
+        .set_table_styles([{"selector": "th",
+                            "props": [("background-color", DARK_BLUE),
+                                      ("color", GOLD), ("font-weight", "700"),
+                                      ("font-size", "11px"), ("text-align", "center"),
+                                      ("border", f"1px solid {GOLD}")]}])
+    )
+    st.dataframe(styled_rank, use_container_width=True, height=500)
+
+    # ── Individual dimension rankings ──
+    st.html('<div class="section-header">📊 Rankings by Individual Dimension</div>')
+
+    dim_tabs = st.tabs([
+        "📈 Return Rank", "📉 Risk (Vol) Rank", "⚖️ Sharpe Rank",
+        "🛡 VaR Rank", "🎯 Hit Rate Rank"
+    ])
+
+    dim_configs = [
+        ("Rank: Return",     "Ann. Return (%)",     "Annual Return",     True,  "{:+.2f}%"),
+        ("Rank: Volatility", "Ann. Volatility (%)", "Ann. Volatility",   False, "{:.2f}%"),
+        ("Rank: Sharpe",     "Sharpe Ratio",        "Sharpe Ratio",      True,  "{:.3f}"),
+        ("Rank: VaR",        "VaR 95% (%)",         "VaR 95%",           False, "{:.2f}%"),
+        ("Rank: Hit Rate",   "Hit Rate (%)",        "Hit Rate",          True,  "{:.1f}%"),
+    ]
+
+    for dtab, (rank_col, val_col, label, higher_better, val_fmt) in zip(dim_tabs, dim_configs):
+        with dtab:
+            sorted_dim = rank_df.sort_values(rank_col)
+            vals       = sorted_dim[val_col]
+            bar_colors = []
+            for i, v in enumerate(vals):
+                if i == 0:   bar_colors.append(GOLD)
+                elif i == 1: bar_colors.append("#C0C0C0")
+                elif i == 2: bar_colors.append("#CD7F32")
+                elif i < len(vals)//3: bar_colors.append(GREEN)
+                elif i > 2*len(vals)//3: bar_colors.append(RED)
+                else: bar_colors.append(LIGHT_BLUE)
+
+            fig_dim = go.Figure(go.Bar(
+                x=vals.values,
+                y=[f"{medal(int(r))} {n}" for n, r in zip(sorted_dim.index, sorted_dim[rank_col])],
+                orientation="h",
+                marker_color=bar_colors,
+                width=0.6,
+                text=[val_fmt.format(v) for v in vals.values],
+                textposition="outside",
+                textfont=dict(family="JetBrains Mono", size=10, color=TEXT_MAIN),
+                hovertemplate=f"<b>%{{y}}</b><br>{label}: %{{x:.2f}}<extra></extra>",
+            ))
+            fig_dim.add_vline(x=0, line_color="rgba(255,255,255,0.2)", line_width=1)
+            fig_dim.update_layout(
+                height=max(400, len(sorted_dim)*32+80),
+                paper_bgcolor=CARD_BG, plot_bgcolor=CARD_BG,
+                font=dict(color=TEXT_MAIN, family="Source Sans 3"),
+                margin=dict(l=10, r=90, t=30, b=40),
+                xaxis=dict(gridcolor="rgba(255,255,255,0.05)"),
+                yaxis=dict(showgrid=False, autorange="reversed"),
+                showlegend=False,
+                title=dict(
+                    text=f"Ranked by {label} ({'Higher = Better' if higher_better else 'Lower = Better'})",
+                    font=dict(color=GOLD, size=13), x=0.01
+                ),
+            )
+            st.plotly_chart(fig_dim, use_container_width=True)
+
+    # ── Radar / spider chart: top 5 overall ──
+    st.html('<div class="section-header">🕸 Risk-Return Radar — Top 5 Overall</div>')
+
+    top5 = rank_df.head(min(5, len(rank_df)))
+    radar_metrics = ["Rank: Return","Rank: Volatility","Rank: Sharpe","Rank: VaR","Rank: Hit Rate"]
+    radar_labels  = ["Return","Low Vol","Sharpe","Low VaR","Hit Rate"]
+    n_indices = len(rank_df)
+
+    fig_radar = go.Figure()
+    radar_colors = [GOLD, LIGHT_BLUE, GREEN, "#FF6B6B", "#9B59B6"]
+    for i, (idx_name, row) in enumerate(top5.iterrows()):
+        # Invert ranks so that rank 1 = full outer ring (score = n, rank n = score 1)
+        scores = [n_indices + 1 - row[r] for r in radar_metrics]
+        scores_closed = scores + [scores[0]]
+        labels_closed = radar_labels + [radar_labels[0]]
+        fig_radar.add_trace(go.Scatterpolar(
+            r=scores_closed,
+            theta=labels_closed,
+            fill="toself",
+            name=idx_name[:20],
+            line=dict(color=radar_colors[i % len(radar_colors)], width=2),
+            fillcolor=radar_colors[i % len(radar_colors)].replace("#", "rgba(").rstrip(")") if False else "rgba(0,0,0,0)",
+            opacity=0.85,
+        ))
+    fig_radar.update_layout(
+        polar=dict(
+            bgcolor=CARD_BG,
+            radialaxis=dict(
+                visible=True, range=[0, n_indices],
+                tickfont=dict(size=8, color=TEXT_MUTED),
+                gridcolor="rgba(255,255,255,0.1)",
+                linecolor="rgba(255,255,255,0.15)",
+            ),
+            angularaxis=dict(
+                tickfont=dict(size=11, color=GOLD, family="Source Sans 3"),
+                gridcolor="rgba(255,255,255,0.1)",
+                linecolor=GOLD,
+            ),
+        ),
+        paper_bgcolor=CARD_BG,
+        font=dict(color=TEXT_MAIN),
+        legend=dict(bgcolor="rgba(0,0,0,0)", font=dict(size=10, color=TEXT_MAIN)),
+        height=480,
+        margin=dict(l=60, r=60, t=60, b=60),
+        title=dict(
+            text="Higher score = Better rank on each dimension",
+            font=dict(color=TEXT_MUTED, size=11), x=0.5
+        ),
+    )
+    st.plotly_chart(fig_radar, use_container_width=True)
+
+    # ── How-to-read legend ──
+    col_leg1, col_leg2 = st.columns(2)
+    with col_leg1:
+        st.html(f"""
+        <div class="metric-card" style="text-align:left; padding:16px 20px;">
+          <div class="metric-label" style="margin-bottom:10px;">🏅 Ranking Methodology</div>
+          <div class="metric-sub" style="line-height:1.8;">
+            <b style="color:{GOLD};-webkit-text-fill-color:{GOLD};">Return Rank</b> — Ann. return (higher = better)<br>
+            <b style="color:{GOLD};-webkit-text-fill-color:{GOLD};">Volatility Rank</b> — Ann. vol (lower = better)<br>
+            <b style="color:{GOLD};-webkit-text-fill-color:{GOLD};">Sharpe Rank</b> — Risk-adj return (higher = better)<br>
+            <b style="color:{GOLD};-webkit-text-fill-color:{GOLD};">VaR Rank</b> — 95% VaR (less negative = better)<br>
+            <b style="color:{GOLD};-webkit-text-fill-color:{GOLD};">Hit Rate Rank</b> — % positive months (higher = better)
+          </div>
+        </div>""")
+    with col_leg2:
+        st.html(f"""
+        <div class="metric-card" style="text-align:left; padding:16px 20px;">
+          <div class="metric-label" style="margin-bottom:10px;">🧮 Composite Score</div>
+          <div class="metric-sub" style="line-height:1.8;">
+            Simple average of all 5 dimension ranks.<br>
+            <b style="color:{GOLD};-webkit-text-fill-color:{GOLD};">Lower composite = better overall rank.</b><br><br>
+            Rank #1 on a dimension = score of 1.<br>
+            All dimensions are equally weighted.<br>
+            Risk-free rate assumed <b style="color:{GOLD};-webkit-text-fill-color:{GOLD};">4.5%</b> for Sharpe.
+          </div>
+        </div>""")
+
+    csv_rank = rank_df[display_cols].to_csv().encode()
+    st.download_button("⬇ Download Rankings CSV", csv_rank, "index_rankings.csv", "text/csv")
 
 
 # ─────────────────────────────────────────────
