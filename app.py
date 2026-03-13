@@ -545,8 +545,16 @@ with tab1:
 
     # Pivot: rows = months, columns = index names
     heat_df = returns_df.copy().round(2)
-    # Last N months selector
-    n_months = st.slider("Show last N months", 6, min(60, len(heat_df)), min(24, len(heat_df)), key="hm_months")
+    # Last N months selector — guard against too few rows
+    _total   = len(heat_df)
+    _min_val = min(6, _total)
+    _max_val = max(_min_val, min(60, _total))
+    _def_val = min(24, _max_val)
+    if _min_val < _max_val:
+        n_months = st.slider("Show last N months", _min_val, _max_val, _def_val, key="hm_months")
+    else:
+        n_months = _total
+        st.info(f"Showing all {_total} available months.")
     heat_df = heat_df.tail(n_months)
 
     # Plotly heatmap
