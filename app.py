@@ -225,6 +225,19 @@ html, body, [class*="css"] {{
 .stSelectbox label, .stMultiSelect label,
 .stSlider label, .stDateInput label,
 .stRadio label {{ color: {LIGHT_BLUE} !important; font-weight: 600; }}
+
+/* Date input labels inside columns in sidebar — Streamlit Cloud fix */
+[data-testid="stDateInput"] label,
+[data-testid="stDateInput"] [data-testid="stWidgetLabel"],
+[data-testid="stDateInput"] [data-testid="stWidgetLabel"] p,
+[data-testid="stDateInput"] [data-testid="stWidgetLabel"] span,
+section[data-testid="stSidebar"] [data-testid="stDateInput"] label,
+section[data-testid="stSidebar"] [data-testid="stDateInput"] p {{
+    color: {LIGHT_BLUE} !important;
+    font-weight: 600 !important;
+    -webkit-text-fill-color: {LIGHT_BLUE} !important;
+    opacity: 1 !important;
+}}
 div[data-testid="stMetric"] {{ background: transparent; }}
 .stTabs [data-baseweb="tab-list"] {{ background: {DARK_BLUE}; border-radius: 8px; }}
 .stTabs [data-baseweb="tab"] {{ color: {LIGHT_BLUE}; font-weight: 600; }}
