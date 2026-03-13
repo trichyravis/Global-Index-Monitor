@@ -648,7 +648,7 @@ with tab2:
         font=dict(color=TEXT_MAIN, family="Source Sans 3"),
         margin=dict(l=20, r=80, t=20, b=40),
         xaxis=dict(gridcolor="rgba(255,255,255,0.05)", ticksuffix="%"),
-        yaxis=dict(gridcolor="none"),
+        yaxis=dict(showgrid=False),
     )
     st.plotly_chart(fig_bar_latest, use_container_width=True)
 
@@ -769,7 +769,7 @@ with tab4:
             paper_bgcolor=CARD_BG, plot_bgcolor=CARD_BG,
             font=dict(color=TEXT_MAIN), margin=dict(l=10, r=60, t=20, b=40),
             xaxis=dict(gridcolor="rgba(255,255,255,0.05)"),
-            yaxis=dict(gridcolor="none"),
+            yaxis=dict(showgrid=False),
         )
         st.plotly_chart(fig_sh, use_container_width=True)
 
