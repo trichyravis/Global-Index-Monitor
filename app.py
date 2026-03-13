@@ -1572,12 +1572,12 @@ with tab7:
     ticker_df = pd.DataFrame(ticker_rows, columns=["Index Name","Yahoo Ticker","Asset Type","Region"])
     st.dataframe(
         ticker_df.style
-        .set_properties(**{{"font-family":"JetBrains Mono,monospace",
-                            "font-size":"11px","text-align":"left"}})
-        .set_table_styles([{{"selector":"th",
-                             "props":[("background-color",DARK_BLUE),("color",GOLD),
-                                      ("font-weight","700"),("font-size","11px"),
-                                      ("text-align","center")]}}]),
+        .set_properties(**{"font-family":"JetBrains Mono,monospace",
+                           "font-size":"11px","text-align":"left"})
+        .set_table_styles([{"selector":"th",
+                            "props":[("background-color",DARK_BLUE),("color",GOLD),
+                                     ("font-weight","700"),("font-size","11px"),
+                                     ("text-align","center")]}]),
         use_container_width=True, hide_index=True
     )
 
