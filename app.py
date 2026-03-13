@@ -530,13 +530,14 @@ st.html(f"""
 # ─────────────────────────────────────────────
 #  TABS
 # ─────────────────────────────────────────────
-tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
+tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
     "🔥 Monthly Heatmap",
     "📈 Trend Charts",
     "📊 Annual Returns",
     "📉 Risk Statistics",
     "🔗 Correlation",
-    "🏆 Rankings"
+    "🏆 Rankings",
+    "📖 Methodology"
 ])
 
 # ────────────────── TAB 1 : HEATMAP ──────────────────
@@ -1158,6 +1159,437 @@ with tab6:
 
     csv_rank = rank_df[display_cols].to_csv().encode()
     st.download_button("⬇ Download Rankings CSV", csv_rank, "index_rankings.csv", "text/csv")
+
+
+
+# ────────────────── TAB 7 : METHODOLOGY ──────────────────
+with tab7:
+    st.html('''<div class="section-header">📖 Methodology & Technical Reference</div>''')
+
+    st.html(f"""
+    <div class="metric-card" style="text-align:left; padding:20px 28px; margin-bottom:18px;">
+      <div style="font-family:'Cinzel',serif; font-size:1.1rem; color:{GOLD};
+                  -webkit-text-fill-color:{GOLD}; margin-bottom:10px; font-weight:700;">
+        🌐 About This Dashboard
+      </div>
+      <div class="metric-sub" style="line-height:1.9; font-size:0.9rem;">
+        This dashboard tracks <b style="color:{LIGHT_BLUE};-webkit-text-fill-color:{LIGHT_BLUE};">monthly returns</b>
+        for 20 global equity and commodity indices sourced live from
+        <b style="color:{LIGHT_BLUE};-webkit-text-fill-color:{LIGHT_BLUE};">Yahoo Finance</b> via the
+        <code style="background:rgba(0,0,0,0.3); padding:2px 6px; border-radius:4px;">yfinance</code> library.
+        All return series are computed from <b>month-end adjusted closing prices</b>.
+        Data is cached for 1 hour (<code style="background:rgba(0,0,0,0.3); padding:2px 6px; border-radius:4px;">ttl=3600s</code>)
+        and can be force-refreshed via the sidebar button.<br><br>
+        Risk-free rate assumed throughout: <b style="color:{GOLD};-webkit-text-fill-color:{GOLD};">4.5% per annum</b>
+        (approximate Indian T-Bill / short-term sovereign rate).
+      </div>
+    </div>
+    """)
+
+    # ── Section 1: Return Calculations ──
+    st.html('''<div class="section-header">📐 Section 1 — Return Calculations</div>''')
+
+    col1, col2 = st.columns(2)
+    with col1:
+        st.html(f"""
+        <div class="metric-card" style="text-align:left; padding:18px 22px;">
+          <div style="color:{GOLD};-webkit-text-fill-color:{GOLD}; font-weight:700;
+                      font-size:0.95rem; margin-bottom:12px;">Monthly Simple Return</div>
+          <div class="metric-sub" style="line-height:1.8;">
+            The percentage change in the adjusted closing price from the last
+            trading day of month <i>t−1</i> to the last trading day of month <i>t</i>.
+          </div>
+          <div style="font-family:'JetBrains Mono',monospace; background:rgba(0,0,0,0.35);
+                      padding:10px 14px; border-radius:6px; margin-top:12px;
+                      border-left:3px solid {GOLD}; font-size:0.85rem; color:{TEXT_MAIN};
+                      -webkit-text-fill-color:{TEXT_MAIN};">
+            R<sub>t</sub> = (P<sub>t</sub> − P<sub>t−1</sub>) / P<sub>t−1</sub> × 100
+          </div>
+          <div class="metric-sub" style="margin-top:10px; font-size:0.78rem;">
+            P<sub>t</sub> = Month-end adjusted close price<br>
+            Computed via <code>pct_change()</code> after <code>resample("ME").last()</code>
+          </div>
+        </div>""")
+
+        st.html(f"""
+        <div class="metric-card" style="text-align:left; padding:18px 22px; margin-top:14px;">
+          <div style="color:{GOLD};-webkit-text-fill-color:{GOLD}; font-weight:700;
+                      font-size:0.95rem; margin-bottom:12px;">Annualised Return</div>
+          <div class="metric-sub" style="line-height:1.8;">
+            Compounds the average monthly return to an annual figure using
+            geometric compounding — more accurate than simple multiplication by 12.
+          </div>
+          <div style="font-family:'JetBrains Mono',monospace; background:rgba(0,0,0,0.35);
+                      padding:10px 14px; border-radius:6px; margin-top:12px;
+                      border-left:3px solid {GOLD}; font-size:0.85rem; color:{TEXT_MAIN};
+                      -webkit-text-fill-color:{TEXT_MAIN};">
+            R<sub>ann</sub> = (1 + R̄<sub>monthly</sub>/100)<sup>12</sup> − 1
+          </div>
+          <div class="metric-sub" style="margin-top:10px; font-size:0.78rem;">
+            R̄<sub>monthly</sub> = arithmetic mean of monthly returns<br>
+            Result expressed as a percentage
+          </div>
+        </div>""")
+
+    with col2:
+        st.html(f"""
+        <div class="metric-card" style="text-align:left; padding:18px 22px;">
+          <div style="color:{GOLD};-webkit-text-fill-color:{GOLD}; font-weight:700;
+                      font-size:0.95rem; margin-bottom:12px;">Cumulative Return</div>
+          <div class="metric-sub" style="line-height:1.8;">
+            Tracks ₹1 invested at the start of the period, compounding each
+            monthly return. Reveals the true growth trajectory including
+            path dependency and volatility drag.
+          </div>
+          <div style="font-family:'JetBrains Mono',monospace; background:rgba(0,0,0,0.35);
+                      padding:10px 14px; border-radius:6px; margin-top:12px;
+                      border-left:3px solid {GOLD}; font-size:0.85rem; color:{TEXT_MAIN};
+                      -webkit-text-fill-color:{TEXT_MAIN};">
+            CumRet<sub>T</sub> = ∏(1 + R<sub>t</sub>/100) − 1
+          </div>
+          <div class="metric-sub" style="margin-top:10px; font-size:0.78rem;">
+            Implemented via <code>cumprod()</code> on (1 + R/100)
+          </div>
+        </div>""")
+
+        st.html(f"""
+        <div class="metric-card" style="text-align:left; padding:18px 22px; margin-top:14px;">
+          <div style="color:{GOLD};-webkit-text-fill-color:{GOLD}; font-weight:700;
+                      font-size:0.95rem; margin-bottom:12px;">Annual Return (Calendar Year)</div>
+          <div class="metric-sub" style="line-height:1.8;">
+            Compounds all 12 monthly returns within each calendar year.
+            Partial years at the start and end of the selected date range
+            are included with whatever months are available.
+          </div>
+          <div style="font-family:'JetBrains Mono',monospace; background:rgba(0,0,0,0.35);
+                      padding:10px 14px; border-radius:6px; margin-top:12px;
+                      border-left:3px solid {GOLD}; font-size:0.85rem; color:{TEXT_MAIN};
+                      -webkit-text-fill-color:{TEXT_MAIN};">
+            R<sub>year</sub> = ∏<sub>t∈year</sub>(1 + R<sub>t</sub>/100) − 1
+          </div>
+          <div class="metric-sub" style="margin-top:10px; font-size:0.78rem;">
+            Grouped by <code>index.year</code> via pandas <code>groupby</code>
+          </div>
+        </div>""")
+
+    # ── Section 2: Volatility ──
+    st.html('''<div class="section-header">📐 Section 2 — Volatility & Dispersion</div>''')
+
+    col3, col4 = st.columns(2)
+    with col3:
+        st.html(f"""
+        <div class="metric-card" style="text-align:left; padding:18px 22px;">
+          <div style="color:{GOLD};-webkit-text-fill-color:{GOLD}; font-weight:700;
+                      font-size:0.95rem; margin-bottom:12px;">Monthly Volatility (Std Dev)</div>
+          <div class="metric-sub" style="line-height:1.8;">
+            Sample standard deviation of monthly returns. Measures the
+            average dispersion of returns around the mean — the most
+            widely used measure of total risk.
+          </div>
+          <div style="font-family:'JetBrains Mono',monospace; background:rgba(0,0,0,0.35);
+                      padding:10px 14px; border-radius:6px; margin-top:12px;
+                      border-left:3px solid {GOLD}; font-size:0.85rem; color:{TEXT_MAIN};
+                      -webkit-text-fill-color:{TEXT_MAIN};">
+            σ<sub>m</sub> = √[ Σ(R<sub>t</sub> − R̄)² / (n−1) ]
+          </div>
+          <div class="metric-sub" style="margin-top:10px; font-size:0.78rem;">
+            Uses Bessel correction (n−1 denominator) — sample std dev
+          </div>
+        </div>""")
+
+    with col4:
+        st.html(f"""
+        <div class="metric-card" style="text-align:left; padding:18px 22px;">
+          <div style="color:{GOLD};-webkit-text-fill-color:{GOLD}; font-weight:700;
+                      font-size:0.95rem; margin-bottom:12px;">Annualised Volatility</div>
+          <div class="metric-sub" style="line-height:1.8;">
+            Scales monthly volatility to an annual figure using the
+            square-root-of-time rule — valid under i.i.d. return assumptions.
+            Standard convention in risk management and portfolio theory.
+          </div>
+          <div style="font-family:'JetBrains Mono',monospace; background:rgba(0,0,0,0.35);
+                      padding:10px 14px; border-radius:6px; margin-top:12px;
+                      border-left:3px solid {GOLD}; font-size:0.85rem; color:{TEXT_MAIN};
+                      -webkit-text-fill-color:{TEXT_MAIN};">
+            σ<sub>ann</sub> = σ<sub>m</sub> × √12
+          </div>
+          <div class="metric-sub" style="margin-top:10px; font-size:0.78rem;">
+            √12 ≈ 3.464 · Assumes independent monthly returns<br>
+            For daily data the multiplier would be √252
+          </div>
+        </div>""")
+
+    # ── Section 3: Risk-Adjusted Metrics ──
+    st.html('''<div class="section-header">📐 Section 3 — Risk-Adjusted Performance</div>''')
+
+    col5, col6 = st.columns(2)
+    with col5:
+        st.html(f"""
+        <div class="metric-card" style="text-align:left; padding:18px 22px;">
+          <div style="color:{GOLD};-webkit-text-fill-color:{GOLD}; font-weight:700;
+                      font-size:0.95rem; margin-bottom:12px;">Sharpe Ratio</div>
+          <div class="metric-sub" style="line-height:1.8;">
+            Measures excess return earned per unit of total risk (volatility).
+            The most widely used risk-adjusted performance metric in finance.
+            A Sharpe above 1.0 is considered good; above 2.0 is excellent.
+          </div>
+          <div style="font-family:'JetBrains Mono',monospace; background:rgba(0,0,0,0.35);
+                      padding:10px 14px; border-radius:6px; margin-top:12px;
+                      border-left:3px solid {GOLD}; font-size:0.85rem; color:{TEXT_MAIN};
+                      -webkit-text-fill-color:{TEXT_MAIN};">
+            S = (R<sub>ann</sub> − R<sub>f</sub>) / σ<sub>ann</sub>
+          </div>
+          <div class="metric-sub" style="margin-top:10px; font-size:0.78rem;">
+            R<sub>f</sub> = 4.5% p.a. (Indian short-term sovereign rate)<br>
+            Higher Sharpe = better risk-adjusted return
+          </div>
+        </div>""")
+
+        st.html(f"""
+        <div class="metric-card" style="text-align:left; padding:18px 22px; margin-top:14px;">
+          <div style="color:{GOLD};-webkit-text-fill-color:{GOLD}; font-weight:700;
+                      font-size:0.95rem; margin-bottom:12px;">Hit Rate (%)</div>
+          <div class="metric-sub" style="line-height:1.8;">
+            The percentage of months in which the index delivered a
+            positive return. A simple, intuitive measure of directional
+            consistency — independent of return magnitude.
+          </div>
+          <div style="font-family:'JetBrains Mono',monospace; background:rgba(0,0,0,0.35);
+                      padding:10px 14px; border-radius:6px; margin-top:12px;
+                      border-left:3px solid {GOLD}; font-size:0.85rem; color:{TEXT_MAIN};
+                      -webkit-text-fill-color:{TEXT_MAIN};">
+            Hit Rate = (# months R<sub>t</sub> &gt; 0) / n × 100
+          </div>
+          <div class="metric-sub" style="margin-top:10px; font-size:0.78rem;">
+            &gt; 55% is generally considered consistent<br>
+            Does not account for magnitude of gains vs losses
+          </div>
+        </div>""")
+
+    with col6:
+        st.html(f"""
+        <div class="metric-card" style="text-align:left; padding:18px 22px;">
+          <div style="color:{GOLD};-webkit-text-fill-color:{GOLD}; font-weight:700;
+                      font-size:0.95rem; margin-bottom:12px;">Skewness</div>
+          <div class="metric-sub" style="line-height:1.8;">
+            Measures the asymmetry of the return distribution.
+            <b style="color:{LIGHT_BLUE};-webkit-text-fill-color:{LIGHT_BLUE};">Positive skew</b>
+            (right tail) implies occasional large gains.
+            <b style="color:{RED};-webkit-text-fill-color:{RED};">Negative skew</b>
+            (left tail) implies occasional large losses — dangerous for risk management.
+          </div>
+          <div style="font-family:'JetBrains Mono',monospace; background:rgba(0,0,0,0.35);
+                      padding:10px 14px; border-radius:6px; margin-top:12px;
+                      border-left:3px solid {GOLD}; font-size:0.85rem; color:{TEXT_MAIN};
+                      -webkit-text-fill-color:{TEXT_MAIN};">
+            Skew = E[(R − μ)³] / σ³
+          </div>
+          <div class="metric-sub" style="margin-top:10px; font-size:0.78rem;">
+            Normal distribution: Skew = 0<br>
+            Most equity indices exhibit negative skew
+          </div>
+        </div>""")
+
+        st.html(f"""
+        <div class="metric-card" style="text-align:left; padding:18px 22px; margin-top:14px;">
+          <div style="color:{GOLD};-webkit-text-fill-color:{GOLD}; font-weight:700;
+                      font-size:0.95rem; margin-bottom:12px;">Excess Kurtosis</div>
+          <div class="metric-sub" style="line-height:1.8;">
+            Measures the "fat-tailedness" of the return distribution relative
+            to a normal distribution. High positive kurtosis (leptokurtosis)
+            means more extreme outcomes than normality predicts — a critical
+            consideration for VaR model validation.
+          </div>
+          <div style="font-family:'JetBrains Mono',monospace; background:rgba(0,0,0,0.35);
+                      padding:10px 14px; border-radius:6px; margin-top:12px;
+                      border-left:3px solid {GOLD}; font-size:0.85rem; color:{TEXT_MAIN};
+                      -webkit-text-fill-color:{TEXT_MAIN};">
+            Kurt<sub>excess</sub> = E[(R − μ)⁴]/σ⁴ − 3
+          </div>
+          <div class="metric-sub" style="margin-top:10px; font-size:0.78rem;">
+            Normal distribution: Kurt = 0<br>
+            Equity markets typically exhibit Kurt &gt; 0 (fat tails)
+          </div>
+        </div>""")
+
+    # ── Section 4: Tail Risk ──
+    st.html('''<div class="section-header">📐 Section 4 — Tail Risk: VaR & CVaR</div>''')
+
+    col7, col8 = st.columns(2)
+    with col7:
+        st.html(f"""
+        <div class="metric-card" style="text-align:left; padding:18px 22px;">
+          <div style="color:{GOLD};-webkit-text-fill-color:{GOLD}; font-weight:700;
+                      font-size:0.95rem; margin-bottom:12px;">Value at Risk — VaR (95%)</div>
+          <div class="metric-sub" style="line-height:1.8;">
+            The <b>worst monthly loss</b> we would not expect to exceed with 95% confidence.
+            Implemented here using the <b>Historical Simulation</b> method — no
+            distributional assumption is required; the empirical return series
+            directly determines the threshold.
+          </div>
+          <div style="font-family:'JetBrains Mono',monospace; background:rgba(0,0,0,0.35);
+                      padding:10px 14px; border-radius:6px; margin-top:12px;
+                      border-left:3px solid {GOLD}; font-size:0.85rem; color:{TEXT_MAIN};
+                      -webkit-text-fill-color:{TEXT_MAIN};">
+            VaR<sub>95%</sub> = 5th percentile of R<sub>t</sub>
+          </div>
+          <div class="metric-sub" style="margin-top:10px; font-size:0.78rem;">
+            Interpretation: "In 95% of months, the loss will not exceed VaR"<br>
+            Implemented via <code>quantile(0.05)</code>
+          </div>
+        </div>""")
+
+    with col8:
+        st.html(f"""
+        <div class="metric-card" style="text-align:left; padding:18px 22px;">
+          <div style="color:{GOLD};-webkit-text-fill-color:{GOLD}; font-weight:700;
+                      font-size:0.95rem; margin-bottom:12px;">CVaR / Expected Shortfall (95%)</div>
+          <div class="metric-sub" style="line-height:1.8;">
+            The <b>average loss in the worst 5% of months</b>. CVaR is a coherent
+            risk measure (unlike VaR) and satisfies sub-additivity — meaning
+            diversification always reduces CVaR. Preferred by Basel III / FRTB
+            over VaR for internal model approaches.
+          </div>
+          <div style="font-family:'JetBrains Mono',monospace; background:rgba(0,0,0,0.35);
+                      padding:10px 14px; border-radius:6px; margin-top:12px;
+                      border-left:3px solid {GOLD}; font-size:0.85rem; color:{TEXT_MAIN};
+                      -webkit-text-fill-color:{TEXT_MAIN};">
+            CVaR<sub>95%</sub> = E[ R<sub>t</sub> | R<sub>t</sub> ≤ VaR<sub>95%</sub> ]
+          </div>
+          <div class="metric-sub" style="margin-top:10px; font-size:0.78rem;">
+            Always ≤ VaR (more conservative) · Captures tail shape<br>
+            Preferred by SEBI stress-testing and Basel FRTB frameworks
+          </div>
+        </div>""")
+
+    # ── Section 5: Correlation ──
+    st.html('''<div class="section-header">📐 Section 5 — Correlation Analysis</div>''')
+
+    col9, col10 = st.columns(2)
+    with col9:
+        st.html(f"""
+        <div class="metric-card" style="text-align:left; padding:18px 22px;">
+          <div style="color:{GOLD};-webkit-text-fill-color:{GOLD}; font-weight:700;
+                      font-size:0.95rem; margin-bottom:12px;">Pearson Correlation Matrix</div>
+          <div class="metric-sub" style="line-height:1.8;">
+            Pairwise linear correlation between monthly return series.
+            The matrix is symmetric with diagonal = 1.
+            Computed on the intersection of available months (listwise deletion
+            of NaN rows via <code>dropna()</code>).
+          </div>
+          <div style="font-family:'JetBrains Mono',monospace; background:rgba(0,0,0,0.35);
+                      padding:10px 14px; border-radius:6px; margin-top:12px;
+                      border-left:3px solid {GOLD}; font-size:0.85rem; color:{TEXT_MAIN};
+                      -webkit-text-fill-color:{TEXT_MAIN};">
+            ρ<sub>ij</sub> = Cov(R<sub>i</sub>, R<sub>j</sub>) / (σ<sub>i</sub> · σ<sub>j</sub>)
+          </div>
+          <div class="metric-sub" style="margin-top:10px; font-size:0.78rem;">
+            Range: −1 (perfect inverse) to +1 (perfect co-movement)<br>
+            |ρ| &gt; 0.75 flagged as highly correlated pairs
+          </div>
+        </div>""")
+
+    with col10:
+        st.html(f"""
+        <div class="metric-card" style="text-align:left; padding:18px 22px;">
+          <div style="color:{GOLD};-webkit-text-fill-color:{GOLD}; font-weight:700;
+                      font-size:0.95rem; margin-bottom:12px;">Diversification Insight</div>
+          <div class="metric-sub" style="line-height:1.8;">
+            Low or negative correlations between indices indicate
+            <b style="color:{LIGHT_BLUE};-webkit-text-fill-color:{LIGHT_BLUE};">diversification benefit</b> —
+            combining them in a portfolio reduces overall volatility
+            without proportionally reducing expected return.
+            The heatmap uses a diverging colour scale:
+          </div>
+          <div style="margin-top:12px; line-height:2.0; font-size:0.82rem;">
+            <span style="background:#004d00; padding:2px 10px; border-radius:4px; color:#fff;">Dark Green = +1.0 (perfect positive)</span><br>
+            <span style="background:#2a3f5f; padding:2px 10px; border-radius:4px; color:#fff; margin-top:4px; display:inline-block;">Mid Blue = 0 (uncorrelated)</span><br>
+            <span style="background:#8b0000; padding:2px 10px; border-radius:4px; color:#fff; margin-top:4px; display:inline-block;">Dark Red = −1.0 (perfect inverse)</span>
+          </div>
+        </div>""")
+
+    # ── Section 6: Rankings Methodology ──
+    st.html('''<div class="section-header">📐 Section 6 — Rankings & Composite Score</div>''')
+
+    st.html(f"""
+    <div class="metric-card" style="text-align:left; padding:18px 22px; margin-bottom:14px;">
+      <div style="color:{GOLD};-webkit-text-fill-color:{GOLD}; font-weight:700;
+                  font-size:0.95rem; margin-bottom:12px;">How the Composite Score is Constructed</div>
+      <div class="metric-sub" style="line-height:1.9;">
+        Each index is ranked on <b>5 independent dimensions</b>. Rank 1 = best performer on that dimension.
+        The Composite Score is the <b>simple arithmetic average</b> of the 5 individual ranks.
+        The Overall Rank is then the ordinal position of the Composite Score (lowest = best).
+      </div>
+    </div>""")
+
+    rank_rows = [
+        ("Return Rank",    "Annualised Return",   "Descending (higher return = Rank 1)",     "Best risk-return tradeoff"),
+        ("Volatility Rank","Ann. Volatility",     "Ascending  (lower vol = Rank 1)",         "Stability & capital preservation"),
+        ("Sharpe Rank",    "Sharpe Ratio",        "Descending (higher Sharpe = Rank 1)",     "Risk-adjusted efficiency"),
+        ("VaR Rank",       "95% VaR",             "Descending (least negative VaR = Rank 1)","Tail-risk protection"),
+        ("Hit Rate Rank",  "Hit Rate (%)",        "Descending (higher hit rate = Rank 1)",   "Directional consistency"),
+    ]
+
+    for rank_name, metric, sort_logic, purpose in rank_rows:
+        st.html(f"""
+        <div class="metric-card" style="text-align:left; padding:14px 20px; margin-bottom:10px;
+                                        border-left:4px solid {GOLD};">
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+            <div style="color:{GOLD};-webkit-text-fill-color:{GOLD}; font-weight:700;
+                        font-size:0.9rem;">{rank_name}</div>
+            <div style="background:rgba(255,215,0,0.12); border:1px solid rgba(255,215,0,0.3);
+                        padding:2px 12px; border-radius:12px; font-size:0.75rem;
+                        color:{LIGHT_BLUE};-webkit-text-fill-color:{LIGHT_BLUE};">{metric}</div>
+          </div>
+          <div class="metric-sub" style="margin-top:8px; font-size:0.82rem; line-height:1.7;">
+            <b style="color:{TEXT_MAIN};-webkit-text-fill-color:{TEXT_MAIN};">Sort order:</b> {sort_logic}<br>
+            <b style="color:{TEXT_MAIN};-webkit-text-fill-color:{TEXT_MAIN};">Purpose:</b> {purpose}
+          </div>
+        </div>""")
+
+    st.html(f"""
+    <div class="metric-card" style="text-align:left; padding:18px 22px; margin-top:6px;
+                                    border:2px solid {GOLD};">
+      <div style="color:{GOLD};-webkit-text-fill-color:{GOLD}; font-weight:700;
+                  font-size:0.95rem; margin-bottom:10px;">⚠ Limitations & Caveats</div>
+      <div class="metric-sub" style="line-height:1.9; font-size:0.85rem;">
+        • <b>Equal weighting</b> of all 5 dimensions may not suit every investor's objective.<br>
+        • Historical returns <b>do not guarantee future performance</b>.<br>
+        • VaR and CVaR use <b>historical simulation</b> — extreme events not in the sample window are not captured.<br>
+        • Annualisation via √12 assumes <b>i.i.d. returns</b> — autocorrelation (momentum/mean-reversion) is ignored.<br>
+        • Correlations are <b>unconditional</b> — during crisis periods correlations typically spike toward +1.<br>
+        • Data sourced from Yahoo Finance; <b>adjusted prices</b> account for dividends and splits but currency effects
+          are not hedged across indices.<br>
+        • Risk-free rate is fixed at 4.5% — users with different domiciles should adjust mentally.
+      </div>
+    </div>""")
+
+    # ── Data sources ──
+    st.html('''<div class="section-header">📡 Data Sources & Tickers</div>''')
+
+    ticker_rows = [(name, meta["ticker"], meta["type"], meta["region"])
+                   for name, meta in INDICES.items()]
+    ticker_df = pd.DataFrame(ticker_rows, columns=["Index Name","Yahoo Ticker","Asset Type","Region"])
+    st.dataframe(
+        ticker_df.style
+        .set_properties(**{{"font-family":"JetBrains Mono,monospace",
+                            "font-size":"11px","text-align":"left"}})
+        .set_table_styles([{{"selector":"th",
+                             "props":[("background-color",DARK_BLUE),("color",GOLD),
+                                      ("font-weight","700"),("font-size","11px"),
+                                      ("text-align","center")]}}]),
+        use_container_width=True, hide_index=True
+    )
+
+    st.html(f"""
+    <div class="metric-card" style="text-align:center; padding:14px; margin-top:16px;">
+      <div class="metric-sub" style="font-size:0.8rem; line-height:1.8;">
+        Built with
+        <b style="color:{LIGHT_BLUE};-webkit-text-fill-color:{LIGHT_BLUE};">Python 3 · Streamlit · yfinance · pandas · NumPy · Plotly</b><br>
+        Data cached hourly via <code>@st.cache_data(ttl=3600)</code> ·
+        For academic and educational use only.
+      </div>
+    </div>""")
 
 
 # ─────────────────────────────────────────────
