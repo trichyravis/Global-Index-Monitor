@@ -226,17 +226,24 @@ html, body, [class*="css"] {{
 .stSlider label, .stDateInput label,
 .stRadio label {{ color: {LIGHT_BLUE} !important; font-weight: 600; }}
 
-/* Date input labels inside columns in sidebar — Streamlit Cloud fix */
+/* Widget label universal fix — covers all inputs in sidebar columns */
+[data-testid="stWidgetLabel"],
+[data-testid="stWidgetLabel"] *,
+[data-testid="stWidgetLabel"] p,
+[data-testid="stWidgetLabel"] span,
+[data-testid="stWidgetLabel"] label,
 [data-testid="stDateInput"] label,
-[data-testid="stDateInput"] [data-testid="stWidgetLabel"],
-[data-testid="stDateInput"] [data-testid="stWidgetLabel"] p,
-[data-testid="stDateInput"] [data-testid="stWidgetLabel"] span,
-section[data-testid="stSidebar"] [data-testid="stDateInput"] label,
-section[data-testid="stSidebar"] [data-testid="stDateInput"] p {{
+[data-testid="stDateInput"] p,
+[data-testid="stDateInput"] span,
+[data-testid="stDateInput"] div[class*="label"],
+.stDateInput > label,
+.stDateInput > div > label,
+div[class*="stDateInput"] label {{
     color: {LIGHT_BLUE} !important;
     font-weight: 600 !important;
     -webkit-text-fill-color: {LIGHT_BLUE} !important;
     opacity: 1 !important;
+    visibility: visible !important;
 }}
 div[data-testid="stMetric"] {{ background: transparent; }}
 .stTabs [data-baseweb="tab-list"] {{ background: {DARK_BLUE}; border-radius: 8px; }}
@@ -368,11 +375,8 @@ with st.sidebar:
     st.html(f'<div class="sidebar-logo">⛰ THE MOUNTAIN PATH<br><span style="font-size:0.7rem;color:{LIGHT_BLUE};-webkit-text-fill-color:{LIGHT_BLUE};">World of Finance</span></div>')
 
     st.markdown("### 📅 Date Range")
-    col1, col2 = st.columns(2)
-    with col1:
-        start_date = st.date_input("From", value=date(2020, 1, 1), min_value=date(2010, 1, 1))
-    with col2:
-        end_date   = st.date_input("To",   value=date.today())
+    start_date = st.date_input("📅 From", value=date(2020, 1, 1), min_value=date(2010, 1, 1))
+    end_date   = st.date_input("📅 To",   value=date.today())
 
     st.markdown("---")
     st.markdown("### 🗂 Filter")
