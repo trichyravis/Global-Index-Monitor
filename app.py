@@ -115,8 +115,27 @@ html, body, [class*="css"] {{
     background: linear-gradient(180deg, {DARK_BLUE} 0%, #001f40 100%) !important;
     border-right: 2px solid {GOLD};
 }}
-[data-testid="stSidebar"] * {{
+/* Sidebar text — targeted, not blanket * override */
+[data-testid="stSidebar"] p,
+[data-testid="stSidebar"] span,
+[data-testid="stSidebar"] li,
+[data-testid="stSidebar"] div[class*="markdown"],
+[data-testid="stSidebar"] [data-testid="stMarkdownContainer"] p {{
     color: {TEXT_MAIN} !important;
+    -webkit-text-fill-color: {TEXT_MAIN} !important;
+}}
+/* Widget labels in sidebar — light blue like other label text */
+[data-testid="stSidebar"] [data-testid="stWidgetLabel"] p,
+[data-testid="stSidebar"] label,
+[data-testid="stSidebar"] .stSelectbox label,
+[data-testid="stSidebar"] .stMultiSelect label,
+[data-testid="stSidebar"] .stDateInput label,
+[data-testid="stSidebar"] [data-testid="stDateInput"] [data-testid="stWidgetLabel"] p {{
+    color: {LIGHT_BLUE} !important;
+    -webkit-text-fill-color: {LIGHT_BLUE} !important;
+    font-weight: 600 !important;
+    opacity: 1 !important;
+    visibility: visible !important;
 }}
 .sidebar-logo {{
     font-family: 'Cinzel', serif;
