@@ -1,3 +1,4 @@
+
 """
 ═══════════════════════════════════════════════════════════════════════════════
   GLOBAL INDEX MONTHLY RETURN TRACKER
@@ -530,12 +531,10 @@ with tab1:
         texttemplate="%{text}",
         textfont={"size": 9, "family": "JetBrains Mono"},
         colorbar=dict(
-            title="Return %",
-            titlefont=dict(color=GOLD),
+            title=dict(text="Return %", font=dict(color=GOLD)),
             tickfont=dict(color=TEXT_MAIN),
-            bgcolor=CARD_BG,
-            outlinecolor=GOLD,
             thickness=14,
+            outlinewidth=0,
         ),
         hoverongaps=False,
         xgap=1, ygap=1,
@@ -555,7 +554,7 @@ with tab1:
 
     # Raw table with styled cells
     st.html('<div class="section-header">Raw Monthly Returns Table</div>')
-    styled = heat_df.style.applymap(color_return).format(fmt)
+    styled = heat_df.style.map(color_return).format(fmt)
     styled = styled.set_properties(**{
         "font-family": "JetBrains Mono, monospace",
         "font-size": "12px",
@@ -661,7 +660,7 @@ with tab3:
     rd_copy = returns_df.copy()
     rd_copy.index = pd.PeriodIndex(rd_copy.index, freq="M")
     annual = rd_copy.groupby(rd_copy.index.year).apply(
-        lambda df: ((1 + df / 100).prod() - 1) * 100
+        lambda df: ((1 + df / 100).prod() - 1) * 100, include_groups=False
     )
     annual.index.name = "Year"
 
@@ -687,7 +686,7 @@ with tab3:
 
     # Annual table
     st.html('<div class="section-header">Annual Return Table</div>')
-    ann_styled = annual.round(2).style.applymap(color_return).format(fmt)
+    ann_styled = annual.round(2).style.map(color_return).format(fmt)
     ann_styled = ann_styled.set_properties(**{
         "font-family": "JetBrains Mono, monospace",
         "font-size": "12px", "text-align": "center",
@@ -718,8 +717,13 @@ with tab4:
     stats["Kurtosis"]               = clean.kurt().round(3)
     stats["Positive Months"]        = (clean > 0).sum()
     stats["Hit Rate (%)"]           = ((clean > 0).sum() / len(clean) * 100).round(1)
-    stats["VaR 95% (Monthly %)"]    = clean.quantile(0.05).round(3)
-    stats["CVaR 95% (Monthly %)"]   = clean[clean.le(clean.quantile(0.05))].mean().round(3)
+    var_95 = clean.quantile(0.05)
+    cvar_95 = pd.Series(
+        {col: clean[col][clean[col] <= var_95[col]].mean() for col in clean.columns},
+        name="CVaR"
+    ).round(3)
+    stats["VaR 95% (Monthly %)"]    = var_95.round(3)
+    stats["CVaR 95% (Monthly %)"]   = cvar_95
 
     def color_stat(val, col):
         if col in ["Avg Monthly Ret (%)", "Ann. Return (%)", "Sharpe Ratio",
@@ -820,12 +824,10 @@ with tab5:
         texttemplate="%{text}",
         textfont={"size": 9, "family": "JetBrains Mono"},
         colorbar=dict(
-            title="Correlation",
-            titlefont=dict(color=GOLD),
+            title=dict(text="Correlation", font=dict(color=GOLD)),
             tickfont=dict(color=TEXT_MAIN),
-            bgcolor=CARD_BG,
-            outlinecolor=GOLD,
             thickness=14,
+            outlinewidth=0,
         ),
         xgap=1, ygap=1,
     ))
