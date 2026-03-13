@@ -635,6 +635,7 @@ with tab2:
         y=latest_sorted.index,
         orientation="h",
         marker_color=bar_colors,
+        width=0.6,
         text=[fmt(v) for v in latest_sorted.values],
         textposition="outside",
         textfont=dict(family="JetBrains Mono", size=10, color=TEXT_MAIN),
@@ -648,7 +649,6 @@ with tab2:
         margin=dict(l=20, r=80, t=20, b=40),
         xaxis=dict(gridcolor="rgba(255,255,255,0.05)", ticksuffix="%"),
         yaxis=dict(gridcolor="none"),
-        bargap=0.3,
     )
     st.plotly_chart(fig_bar_latest, use_container_width=True)
 
